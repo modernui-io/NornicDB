@@ -28,6 +28,9 @@ type EmbedWorker struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+	// lifecycleMu serializes worker stop/wait/restart sequences so Reset, Close,
+	// and deferred StartWorkers cannot reuse the WaitGroup concurrently.
+	lifecycleMu sync.Mutex
 
 	// Trigger channel to wake up worker immediately
 	trigger chan struct{}
@@ -187,6 +190,8 @@ func NewEmbedWorker(embedder embed.Embedder, storage storage.Engine, config *Emb
 // StartWorkers starts the embedding worker goroutines. It is used when the queue was
 // created with DeferWorkerStart=true (e.g. to avoid competing with DB warmup). Idempotent.
 func (ew *EmbedWorker) StartWorkers() {
+	ew.lifecycleMu.Lock()
+	defer ew.lifecycleMu.Unlock()
 	ew.mu.Lock()
 	defer ew.mu.Unlock()
 	if ew.closed.Load() || ew.workersStarted {
@@ -309,6 +314,9 @@ func (ew *EmbedWorker) Stats() WorkerStats {
 // This clears processed counts and the recently-processed cache,
 // which is necessary when regenerating all embeddings.
 func (ew *EmbedWorker) Reset() {
+	ew.lifecycleMu.Lock()
+	defer ew.lifecycleMu.Unlock()
+
 	ew.mu.Lock()
 	if ew.closed.Load() {
 		ew.mu.Unlock()
@@ -365,6 +373,9 @@ func (ew *EmbedWorker) Reset() {
 
 // Close gracefully shuts down the worker.
 func (ew *EmbedWorker) Close() {
+	ew.lifecycleMu.Lock()
+	defer ew.lifecycleMu.Unlock()
+
 	ew.closed.Store(true)
 
 	// Stop pending debounced trigger timer.
