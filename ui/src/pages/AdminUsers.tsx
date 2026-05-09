@@ -212,6 +212,196 @@ export function AdminUsers() {
     }
   };
 
+<<<<<<< Updated upstream
+=======
+  const usersGridData = useMemo<GridRecord[]>(() => users.map((user) => ({
+    ...user,
+    __gridId: user.username,
+  })), [users]);
+
+  const userColumns = useMemo<GridColumnDef[]>(() => [
+    {
+      name: 'username',
+      displayName: 'Username',
+      field: 'username',
+      width: 'minmax(10rem, 1.1fr)',
+    },
+    {
+      name: 'email',
+      displayName: 'Email',
+      field: 'email',
+      enableCellEdit: true,
+      width: 'minmax(14rem, 1.4fr)',
+    },
+    {
+      name: 'roles',
+      displayName: 'Roles',
+      field: 'roles',
+      enableSorting: false,
+      width: 'minmax(16rem, 1.5fr)',
+    },
+    {
+      name: 'status',
+      displayName: 'Status',
+      field: 'disabled',
+      enableSorting: false,
+      width: '140px',
+    },
+    {
+      name: 'last_login',
+      displayName: 'Last Login',
+      field: 'last_login',
+      width: 'minmax(12rem, 1fr)',
+      formatter: (value) => (value ? new Date(String(value)).toLocaleString() : 'Never'),
+    },
+    {
+      name: 'actions',
+      displayName: 'Actions',
+      width: '180px',
+      enableSorting: false,
+      enableFiltering: false,
+    },
+  ], []);
+
+  const userGridOptions = useMemo<GridOptions>(() => ({
+    id: 'admin-users-grid',
+    data: usersGridData,
+    columnDefs: userColumns,
+    rowIdentity: (row) => String(row.__gridId),
+    enableSorting: true,
+    enableFiltering: true,
+    enableCellEdit: true,
+    enableCellEditOnFocus: true,
+    viewportHeight: 560,
+    emptyMessage: 'No users found',
+  }), [userColumns, usersGridData]);
+
+  useEffect(() => {
+    if (!usersGridApi) {
+      return;
+    }
+
+    return usersGridApi.edit.on.afterCellEdit((row, column, newValue, oldValue) => {
+      if (column.name !== 'email') {
+        return;
+      }
+
+      const username = String(row.username ?? '');
+      const user = users.find((entry) => entry.username === username);
+      if (!user) {
+        return;
+      }
+
+      const nextEmail = String(newValue ?? '').trim();
+      const previousEmail = String(oldValue ?? '').trim();
+      if (nextEmail === previousEmail) {
+        return;
+      }
+
+      void handleUpdateUser(user, { email: nextEmail || undefined });
+    });
+  }, [handleUpdateUser, users, usersGridApi]);
+
+  const renderUserCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & User;
+
+    if (ctx.column.name === 'roles') {
+      return (
+        <div className="flex flex-wrap gap-3 py-1" onClick={(e) => e.stopPropagation()}>
+          {availableRoles.map((role) => {
+            const checked = row.roles.includes(role);
+            const disableRemoval = checked && row.roles.length === 1;
+            return (
+              <label key={role} className="inline-flex items-center gap-2 text-xs text-norse-silver">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disableRemoval}
+                  onChange={() => {
+                    const nextRoles = checked
+                      ? row.roles.filter((entry) => entry !== role)
+                      : [...row.roles, role];
+                    if (nextRoles.length > 0) {
+                      void handleUpdateUser(row, { roles: nextRoles });
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-norse-rune bg-norse-stone text-nornic-primary"
+                />
+                <span className="capitalize">{role}</span>
+              </label>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (ctx.column.name === 'status') {
+      return (
+        <div className="py-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => void handleUpdateUser(row, { disabled: !row.disabled })}
+            className={`px-2 py-1 rounded text-xs ${row.disabled ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
+          >
+            {row.disabled ? 'Disabled' : 'Active'}
+          </button>
+        </div>
+      );
+    }
+
+    if (ctx.column.name === 'actions') {
+      return (
+        <div className="flex gap-2 py-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => usersGridApi?.edit.beginCellEdit(String(row.__gridId), 'email')}
+            icon={Edit}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => handleDeleteUser(row.username)}
+            icon={Trash2}
+          >
+            Delete
+          </Button>
+        </div>
+      );
+    }
+
+    if (ctx.column.name === 'username') {
+      return <div className="font-medium text-white py-1">{String(ctx.value ?? '')}</div>;
+    }
+
+    if (ctx.column.name === 'last_login') {
+      return (
+        <div className="text-sm text-norse-fog py-1">
+          {row.last_login ? new Date(row.last_login).toLocaleString() : 'Never'}
+        </div>
+      );
+    }
+
+    if (ctx.column.name === 'email') {
+      return (
+        <div className="text-norse-silver py-1">{String(ctx.value || '—')}</div>
+      );
+    }
+
+    return null;
+  };
+
+  const userCellRenderers = useMemo(() => ({
+    username: renderUserCell,
+    roles: renderUserCell,
+    status: renderUserCell,
+    last_login: renderUserCell,
+    actions: renderUserCell,
+  }), [renderUserCell]);
+
+>>>>>>> Stashed changes
   if (!isAdmin) {
     return null;
   }
@@ -312,6 +502,7 @@ export function AdminUsers() {
 
         {/* Users Table */}
         <div className="bg-norse-shadow border border-norse-rune rounded-lg overflow-hidden">
+<<<<<<< Updated upstream
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-norse-stone">
@@ -399,6 +590,14 @@ export function AdminUsers() {
                 )}
               </tbody>
             </table>
+=======
+          <div className="nornic-grid p-4">
+            <UiGrid
+              options={userGridOptions}
+              onRegisterApi={setUsersGridApi}
+              cellRenderers={userCellRenderers}
+            />
+>>>>>>> Stashed changes
           </div>
         </div>
 

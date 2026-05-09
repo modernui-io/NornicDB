@@ -331,6 +331,156 @@ export function DatabaseAccess() {
 
   const userDefinedRoles = roles.filter((r) => !BUILTIN_ROLES.includes(r.toLowerCase()));
 
+<<<<<<< Updated upstream
+=======
+  const accessGridData = useMemo<GridRecord[]>(() => roles.map((role) => ({
+    __gridId: role,
+    role,
+  })), [roles]);
+
+  const accessColumnDefs = useMemo<GridColumnDef[]>(() => [
+    {
+      name: 'role',
+      displayName: 'Role',
+      field: 'role',
+      width: 'minmax(12rem, 1fr)',
+    },
+    ...dbNames.map((db) => ({
+      name: db,
+      displayName: db,
+      width: '120px',
+      enableSorting: false,
+      enableFiltering: false,
+    })),
+  ], [dbNames]);
+
+  const accessGridOptions = useMemo<GridOptions>(() => ({
+    id: 'database-access-grid',
+    data: accessGridData,
+    columnDefs: accessColumnDefs,
+    rowIdentity: (row) => String(row.__gridId),
+    enableSorting: true,
+    enableFiltering: true,
+    viewportHeight: 420,
+    emptyMessage: 'No roles found',
+  }), [accessColumnDefs, accessGridData]);
+
+  const entitlementGridData = useMemo<GridRecord[]>(() => roles.map((role) => ({
+    __gridId: role,
+    role,
+  })), [roles]);
+
+  const entitlementColumnDefs = useMemo<GridColumnDef[]>(() => [
+    {
+      name: 'role',
+      displayName: 'Role',
+      field: 'role',
+      width: 'minmax(12rem, 1fr)',
+    },
+    ...globalEntitlements.map((ent) => ({
+      name: ent.id,
+      displayName: ent.name,
+      width: '120px',
+      enableSorting: false,
+      enableFiltering: false,
+    })),
+  ], [globalEntitlements]);
+
+  const entitlementGridOptions = useMemo<GridOptions>(() => ({
+    id: 'role-entitlements-grid',
+    data: entitlementGridData,
+    columnDefs: entitlementColumnDefs,
+    rowIdentity: (row) => String(row.__gridId),
+    enableSorting: true,
+    enableFiltering: true,
+    viewportHeight: 420,
+    emptyMessage: 'No entitlements found',
+  }), [entitlementColumnDefs, entitlementGridData]);
+
+  const renderAccessCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & { role: string };
+    const role = row.role;
+
+    if (ctx.column.name === 'role') {
+      const permissionTags = getEffectivePermissionTagsForRole(role, privilegesMatrix, roleEntitlements);
+      return (
+        <div className="flex items-center gap-2 flex-wrap py-1">
+          <span className="font-medium text-white capitalize">{role}</span>
+          <span className="flex gap-1.5">
+            {permissionTags.map((tag) => (
+              <span
+                key={tag}
+                className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  tag === 'read-only'
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'bg-emerald-500/20 text-emerald-400'
+                }`}
+              >
+                {tag}
+              </span>
+            ))}
+          </span>
+        </div>
+      );
+    }
+
+    const db = ctx.column.name;
+    const dbs = getDatabasesForRole(role);
+    const isAll = dbs.length === 0;
+    const checked = isAll || dbs.includes(db);
+    const isAdminSystemOrDefault =
+      role.toLowerCase() === 'admin' && (db === SYSTEM_DB || db === DEFAULT_DB);
+
+    return (
+      <div className="flex items-center justify-center py-1" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={isAdminSystemOrDefault}
+          onChange={() => {
+            toggleDbForRole(role, db);
+          }}
+          className="w-4 h-4 rounded border-norse-rune bg-norse-stone text-nornic-primary disabled:opacity-70"
+          title={isAdminSystemOrDefault ? 'Admin always has access to system and default database' : undefined}
+        />
+      </div>
+    );
+  };
+
+  const accessCellRenderers = useMemo(
+    () => Object.fromEntries(accessColumnDefs.map(({ name }) => [name, renderAccessCell])),
+    [accessColumnDefs, renderAccessCell],
+  );
+
+  const renderEntitlementCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & { role: string };
+    const role = row.role;
+
+    if (ctx.column.name === 'role') {
+      return <div className="font-medium text-white capitalize py-1">{role}</div>;
+    }
+
+    const adminEntitlementsReadOnly = role.toLowerCase() === 'admin';
+
+    return (
+      <div className="flex items-center justify-center py-1" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={getEntitlementsForRole(role).includes(ctx.column.name)}
+          disabled={adminEntitlementsReadOnly}
+          onChange={() => toggleEntitlementForRole(role, ctx.column.name)}
+          className="w-4 h-4 rounded border-norse-rune bg-norse-stone text-nornic-primary disabled:opacity-70"
+        />
+      </div>
+    );
+  };
+
+  const entitlementCellRenderers = useMemo(
+    () => Object.fromEntries(entitlementColumnDefs.map(({ name }) => [name, renderEntitlementCell])),
+    [entitlementColumnDefs, renderEntitlementCell],
+  );
+
+>>>>>>> Stashed changes
   if (!isAdmin) return null;
 
   if (loading) {
@@ -381,6 +531,7 @@ export function DatabaseAccess() {
             <Database className="w-4 h-4" />
             Access by role
           </h2>
+<<<<<<< Updated upstream
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-norse-stone/50">
@@ -455,6 +606,10 @@ export function DatabaseAccess() {
                 })}
               </tbody>
             </table>
+=======
+          <div className="nornic-grid p-4">
+            <UiGrid options={accessGridOptions} cellRenderers={accessCellRenderers} />
+>>>>>>> Stashed changes
           </div>
         </div>
 
@@ -480,6 +635,7 @@ export function DatabaseAccess() {
             <p className="px-4 py-2 text-xs text-norse-fog border-b border-norse-rune">
               Assign global permissions to each role. These control API access (read, write, admin, user management, etc.).
             </p>
+<<<<<<< Updated upstream
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-norse-stone/50">
@@ -526,6 +682,10 @@ export function DatabaseAccess() {
                   })}
                 </tbody>
               </table>
+=======
+            <div className="nornic-grid p-4">
+              <UiGrid options={entitlementGridOptions} cellRenderers={entitlementCellRenderers} />
+>>>>>>> Stashed changes
             </div>
           </div>
         )}

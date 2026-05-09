@@ -3,8 +3,14 @@
  * Extracted from Browser.tsx for reusability
  */
 
+<<<<<<< Updated upstream
+=======
+import { useEffect, useMemo, useRef, useState } from "react";
+import { UiGrid } from "@ornery/ui-grid-react";
+import type { GridCellTemplateContext, GridColumnDef, GridOptions, GridRecord, UiGridApi } from "@ornery/ui-grid-core";
+>>>>>>> Stashed changes
 import { ExpandableCell } from "../common/ExpandableCell";
-import { extractNodeFromResult, getAllNodeIdsFromQueryResults } from "../../utils/nodeUtils";
+import { extractNodeFromResult } from "../../utils/nodeUtils";
 
 interface QueryResultsTableProps {
   cypherResult: {
@@ -18,29 +24,216 @@ interface QueryResultsTableProps {
   } | null;
   selectedNodeIds: Set<string>;
   onNodeSelect: (nodeData: { id: string; labels: string[]; properties: Record<string, unknown> }) => void;
-  onToggleSelect: (nodeId: string) => void;
-  onSelectAll: (nodeIds: string[]) => void;
-  onClearSelection: () => void;
+  onSelectionChange: (nodeIds: string[]) => void;
 }
 
 export function QueryResultsTable({
   cypherResult,
   selectedNodeIds,
   onNodeSelect,
-  onToggleSelect,
-  onSelectAll,
-  onClearSelection,
+  onSelectionChange,
 }: QueryResultsTableProps) {
   if (!cypherResult || !cypherResult.results[0]) {
     return null;
   }
 
+<<<<<<< Updated upstream
   const allNodeIds = getAllNodeIdsFromQueryResults(cypherResult);
   const allSelected = allNodeIds.length > 0 && allNodeIds.every(id => selectedNodeIds.has(id));
   const columns = cypherResult.results[0].columns ?? [];
+=======
+  const result = cypherResult.results[0];
+
+  const [gridApi, setGridApi] = useState<UiGridApi | null>(null);
+  const isSyncingSelectionRef = useRef(false);
+
+  const { columnDefs, gridData } = useMemo(() => {
+    const nextColumns = result.columns ?? [];
+
+    const nextGridData: GridRecord[] = result.data.map((row, rowIndex) => {
+      let nodeId: string | null = null;
+      let nodeData: { id: string; labels: string[]; properties: Record<string, unknown> } | null = null;
+
+      for (const cell of row.row) {
+        if (cell && typeof cell === "object") {
+          const cellObj = cell as Record<string, unknown>;
+          if (cellObj.elementId || cellObj.id || cellObj._nodeId) {
+            const extracted = extractNodeFromResult(cellObj);
+            if (extracted) {
+              nodeId = extracted.id;
+              nodeData = extracted;
+              break;
+            }
+          }
+        }
+      }
+
+      const record: GridRecord = {
+        __gridId: `result-row-${rowIndex}-${nodeId ?? "no-node"}`,
+        __nodeId: nodeId,
+        __nodeData: nodeData,
+      };
+
+      nextColumns.forEach((column, index) => {
+        record[column] = row.row[index];
+      });
+
+      return record;
+    });
+
+    const nextColumnDefs: GridColumnDef[] = nextColumns.map((column) => ({
+        name: column,
+        displayName: column,
+        field: column,
+        type: "object" as const,
+        width: "minmax(12rem, 1fr)",
+      }));
+
+    return {
+      columnDefs: nextColumnDefs,
+      gridData: nextGridData,
+    };
+  }, [cypherResult, result.columns, result.data]);
+
+  const gridOptions = useMemo<GridOptions>(
+    () => ({
+      id: "query-results-grid",
+      data: gridData,
+      columnDefs,
+      rowIdentity: (row) => String(row.__gridId),
+      enableSorting: true,
+      enableFiltering: false,
+      enableCellEdit: false,
+      enableRowSelection: true,
+      enableRowHeaderSelection: true,
+      enableSelectAll: true,
+      enableSelectionBatchEvent: true,
+      isRowSelectable: (row) => Boolean(row.entity.__nodeId),
+      viewportHeight: 520,
+      emptyMessage: "No rows returned",
+    }),
+    [columnDefs, gridData],
+  );
+
+  const getSelectableNodeIds = (rows: GridRecord[]) => rows
+    .map((row) => row.__nodeId)
+    .filter((nodeId): nodeId is string => typeof nodeId === "string" && nodeId.length > 0);
+
+  useEffect(() => {
+    if (!gridApi?.selection) {
+      return;
+    }
+
+    const syncSelectionFromGrid = () => {
+      if (isSyncingSelectionRef.current) {
+        return;
+      }
+
+      const nextSelectedRows = gridApi.selection.getSelectedRows?.() ?? [];
+      onSelectionChange(getSelectableNodeIds(nextSelectedRows));
+    };
+
+    const unsubscribeSingle = gridApi.selection.on.rowSelectionChanged(() => {
+      syncSelectionFromGrid();
+    });
+    const unsubscribeBatch = gridApi.selection.on.rowSelectionChangedBatch(() => {
+      syncSelectionFromGrid();
+    });
+
+    return () => {
+      unsubscribeSingle();
+      unsubscribeBatch();
+    };
+  }, [gridApi, onSelectionChange]);
+
+  useEffect(() => {
+    if (!gridApi?.selection) {
+      return;
+    }
+
+    const targetRows = gridData.filter((row) => selectedNodeIds.has(String(row.__nodeId ?? "")));
+    const currentSelectedRows = gridApi.selection.getSelectedRows?.() ?? [];
+    const targetIds = new Set(getSelectableNodeIds(targetRows));
+    const currentIds = new Set(getSelectableNodeIds(currentSelectedRows));
+
+    if (
+      targetIds.size === currentIds.size &&
+      Array.from(targetIds).every((nodeId) => currentIds.has(nodeId))
+    ) {
+      return;
+    }
+
+    isSyncingSelectionRef.current = true;
+    try {
+      gridApi.selection.clearSelectedRows?.();
+      targetRows.forEach((row) => {
+        gridApi.selection.selectRow?.(row);
+      });
+    } finally {
+      isSyncingSelectionRef.current = false;
+    }
+  }, [gridApi, gridData, selectedNodeIds]);
+
+  const renderCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & {
+      __nodeId?: string | null;
+      __nodeData?: { id: string; labels: string[]; properties: Record<string, unknown> } | null;
+    };
+    const nodeData = row.__nodeData ?? null;
+
+    const value = ctx.value;
+
+    if (value && typeof value === "object") {
+      return (
+        <div className="font-mono text-xs py-1 space-y-1">
+          {nodeData ? (
+            <button
+              type="button"
+              onClick={() => onNodeSelect(nodeData)}
+              className="text-[11px] uppercase tracking-wide text-nornic-primary hover:text-white"
+            >
+              Open
+            </button>
+          ) : null}
+          <ExpandableCell data={value} />
+        </div>
+      );
+    }
+
+    const displayValue =
+      value === null
+        ? "null"
+        : value === undefined || value === ""
+          ? "-"
+          : String(value);
+
+    const clickable = Boolean(nodeData);
+
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (nodeData) {
+            onNodeSelect(nodeData);
+          }
+        }}
+        disabled={!clickable}
+        className={`w-full text-left font-mono text-xs py-1 ${clickable ? "cursor-pointer hover:text-white" : "cursor-default"}`}
+      >
+        {displayValue}
+      </button>
+    );
+  };
+>>>>>>> Stashed changes
+
+  const cellRenderers = useMemo(
+    () => Object.fromEntries(columnDefs.map(({ name }) => [name, renderCell])),
+    [columnDefs, renderCell],
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+<<<<<<< Updated upstream
       <div className="flex-1 overflow-auto">
         <table className="result-table">
           <thead>
@@ -156,6 +349,10 @@ export function QueryResultsTable({
             })}
           </tbody>
         </table>
+=======
+      <div className="flex-1 overflow-hidden nornic-grid">
+        <UiGrid options={gridOptions} cellRenderers={cellRenderers} onRegisterApi={setGridApi} />
+>>>>>>> Stashed changes
       </div>
       <p className="text-xs text-norse-silver mt-2 px-2">
         {cypherResult.results[0].data.length} row(s) returned

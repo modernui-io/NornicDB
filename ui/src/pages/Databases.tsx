@@ -237,6 +237,156 @@ export function Databases() {
     }
   };
 
+<<<<<<< Updated upstream
+=======
+  const configGridData = useMemo<GridRecord[]>(() => configKeys.map((meta) => ({
+    __gridId: meta.key,
+    key: meta.key.replace(/^NORNICDB_/, ""),
+    rawKey: meta.key,
+    type: meta.type,
+    category: meta.category || "Other",
+    value: configFormValues[meta.key] ?? "",
+    useDefault: configUseDefault[meta.key] ?? true,
+    effectiveDefault: configEffective[meta.key] ?? "",
+  })), [configEffective, configFormValues, configKeys, configUseDefault]);
+
+  const configColumnDefs = useMemo<GridColumnDef[]>(() => [
+    {
+      name: "category",
+      displayName: "Category",
+      field: "category",
+      width: "160px",
+    },
+    {
+      name: "key",
+      displayName: "Key",
+      field: "key",
+      width: "minmax(18rem, 1.4fr)",
+    },
+    {
+      name: "value",
+      displayName: "Value",
+      field: "value",
+      width: "minmax(14rem, 1.3fr)",
+      enableCellEdit: true,
+      cellEditableCondition: (ctx) => !Boolean(ctx.row.useDefault) && ctx.row.type !== "boolean",
+    },
+    {
+      name: "useDefault",
+      displayName: "Use Default",
+      field: "useDefault",
+      width: "120px",
+      enableSorting: false,
+    },
+    {
+      name: "effectiveDefault",
+      displayName: "Effective Default",
+      field: "effectiveDefault",
+      width: "minmax(12rem, 1fr)",
+    },
+  ], []);
+
+  const configGridOptions = useMemo<GridOptions>(() => ({
+    id: "database-config-grid",
+    data: configGridData,
+    columnDefs: configColumnDefs,
+    rowIdentity: (row) => String(row.__gridId),
+    enableGrouping: true,
+    grouping: { groupBy: ["category"] },
+    enableSorting: true,
+    enableFiltering: true,
+    enableCellEdit: true,
+    enableCellEditOnFocus: true,
+    viewportHeight: 400,
+    emptyMessage: "No configuration keys available",
+  }), [configColumnDefs, configGridData]);
+
+  useEffect(() => {
+    if (!configGridApi) {
+      return;
+    }
+
+    return configGridApi.edit.on.afterCellEdit((row, column, newValue, oldValue) => {
+      if (column.name !== "value") {
+        return;
+      }
+      if (String(newValue ?? "") === String(oldValue ?? "")) {
+        return;
+      }
+      setConfigFormValue(String(row.rawKey), String(newValue ?? ""));
+    });
+  }, [configGridApi]);
+
+  useEffect(() => {
+    if (!configDbName || !configSectionRef.current) {
+      return;
+    }
+
+    configSectionRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [configDbName]);
+
+  const renderConfigCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & {
+      rawKey: string;
+      type: string;
+      useDefault: boolean;
+      value: string;
+      effectiveDefault: string;
+    };
+
+    if (ctx.column.name === "value" && row.type === "boolean") {
+      return (
+        <div className="py-1" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={String(row.value) === "true"}
+            disabled={row.useDefault}
+            onChange={(e) => setConfigFormValue(row.rawKey, e.target.checked ? "true" : "false")}
+            className="rounded border-norse-rune bg-norse-stone text-nornic-primary"
+          />
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "useDefault") {
+      return (
+        <div className="py-1" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={row.useDefault}
+            onChange={(e) => setConfigUseDefaultForKey(row.rawKey, e.target.checked)}
+            className="rounded border-norse-rune bg-norse-stone text-nornic-primary"
+          />
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "effectiveDefault") {
+      return <div className="py-1 text-norse-silver">{String(ctx.value || "—")}</div>;
+    }
+
+    if (ctx.column.name === "key") {
+      return <div className="py-1 text-white font-medium">{String(ctx.value ?? "")}</div>;
+    }
+
+    if (ctx.column.name === "value" && row.useDefault) {
+      return <div className="py-1 text-norse-fog">{String(row.value || "—")}</div>;
+    }
+
+    return null;
+  };
+
+  const configCellRenderers = useMemo(() => ({
+    key: renderConfigCell,
+    value: renderConfigCell,
+    useDefault: renderConfigCell,
+    effectiveDefault: renderConfigCell,
+  }), [renderConfigCell]);
+
+>>>>>>> Stashed changes
   if (loading) {
     return (
       <PageLayout>
@@ -513,9 +663,39 @@ export function Databases() {
                     </div>
                   )}
                 </div>
+<<<<<<< Updated upstream
               );
             })}
           </div>
+=======
+
+                <div className="p-6 space-y-4">
+                  {configLoading ? (
+                    <div className="text-norse-silver py-8 text-center">Loading...</div>
+                  ) : (
+                    <>
+                      {configError && (
+                        <Alert
+                          type="error"
+                          message={configError}
+                          dismissible
+                          onDismiss={() => setConfigError("")}
+                        />
+                      )}
+                      <div className="nornic-grid">
+                        <UiGrid
+                          options={configGridOptions}
+                          onRegisterApi={setConfigGridApi}
+                          cellRenderers={configCellRenderers}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
+          </>
+>>>>>>> Stashed changes
         )}
       </main>
 

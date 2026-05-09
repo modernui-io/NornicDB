@@ -332,6 +332,122 @@ export function RetentionAdmin() {
     setPolicyModalOpen(true);
   };
 
+<<<<<<< Updated upstream
+=======
+  const updatePolicyInline = useCallback(
+    async (policy: RetentionPolicy, patch: Partial<RetentionPolicy>) => {
+      setError("");
+      setSuccess("");
+      try {
+        const { __gridId: _, ...cleanPolicy } = policy as RetentionPolicy & { __gridId?: unknown };
+        await api.updateRetentionPolicy(policy.id, { ...cleanPolicy, ...patch });
+        await refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update retention policy");
+        await refresh();
+      }
+    },
+    [refresh],
+  );
+
+  const renderPolicyCell = (ctx: GridCellTemplateContext) => {
+    const row = ctx.row as GridRecord & RetentionPolicy;
+
+    if (ctx.column.name === "description") {
+      return (
+        <div className="py-1 text-sm text-norse-silver whitespace-pre-wrap">
+          {row.description || "—"}
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "category") {
+      return (
+        <div className="py-1" onClick={(e) => e.stopPropagation()}>
+          <select
+            value={row.category}
+            onChange={(e) =>
+              void updatePolicyInline(row, {
+                category: e.target.value as RetentionCategory,
+              })
+            }
+            className="w-full rounded border border-norse-rune bg-norse-stone px-2 py-1 text-sm text-white"
+          >
+            {RETENTION_CATEGORIES.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "active") {
+      return (
+        <div className="py-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => void updatePolicyInline(row, { active: !row.active })}
+            className={`px-2 py-1 rounded text-xs font-medium ${row.active ? "bg-green-500/20 text-green-300" : "bg-norse-stone text-norse-silver"}`}
+          >
+            {row.active ? "Active" : "Inactive"}
+          </button>
+          {(row.compliance_frameworks ?? []).length > 0 ? (
+            <div className="text-xs text-norse-fog mt-2">
+              {(row.compliance_frameworks ?? []).join(", ")}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "actions") {
+      return (
+        <div className="flex justify-end gap-2 py-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Edit2}
+            onClick={() => openEditPolicy(row)}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            icon={Trash2}
+            onClick={() => setPendingAction({ kind: "delete-policy", policy: row })}
+          >
+            Delete
+          </Button>
+        </div>
+      );
+    }
+
+    if (ctx.column.name === "name" || ctx.column.name === "id") {
+      return <div className={`py-1 ${ctx.column.name === "name" ? "font-medium text-white" : "text-xs text-norse-fog"}`}>{String(ctx.value ?? "—")}</div>;
+    }
+
+    if (ctx.column.name === "retention" || ctx.column.name === "archive") {
+      return <div className="py-1 text-white">{String(ctx.value ?? "—")}</div>;
+    }
+
+    return null;
+  };
+
+  const policyCellRenderers = useMemo(() => ({
+    name: renderPolicyCell,
+    id: renderPolicyCell,
+    description: renderPolicyCell,
+    category: renderPolicyCell,
+    retention: renderPolicyCell,
+    archive: renderPolicyCell,
+    active: renderPolicyCell,
+    actions: renderPolicyCell,
+  }), [renderPolicyCell]);
+
+>>>>>>> Stashed changes
   const savePolicy = async () => {
     setPolicySaving(true);
     setError("");
@@ -645,6 +761,7 @@ export function RetentionAdmin() {
                   </Button>
                 </div>
 
+<<<<<<< Updated upstream
                 <div className="overflow-x-auto border border-norse-rune rounded-lg">
                   <table className="w-full text-sm">
                     <thead className="bg-norse-stone/60">
@@ -720,6 +837,10 @@ export function RetentionAdmin() {
                       )}
                     </tbody>
                   </table>
+=======
+                <div className="nornic-grid border border-norse-rune rounded-lg p-4">
+                  <UiGrid options={policyGridOptions} cellRenderers={policyCellRenderers} />
+>>>>>>> Stashed changes
                 </div>
               </div>
 
