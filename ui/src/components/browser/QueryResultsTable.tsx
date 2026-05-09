@@ -3,12 +3,9 @@
  * Extracted from Browser.tsx for reusability
  */
 
-<<<<<<< Updated upstream
-=======
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UiGrid } from "@ornery/ui-grid-react";
 import type { GridCellTemplateContext, GridColumnDef, GridOptions, GridRecord, UiGridApi } from "@ornery/ui-grid-core";
->>>>>>> Stashed changes
 import { ExpandableCell } from "../common/ExpandableCell";
 import { extractNodeFromResult } from "../../utils/nodeUtils";
 
@@ -37,11 +34,6 @@ export function QueryResultsTable({
     return null;
   }
 
-<<<<<<< Updated upstream
-  const allNodeIds = getAllNodeIdsFromQueryResults(cypherResult);
-  const allSelected = allNodeIds.length > 0 && allNodeIds.every(id => selectedNodeIds.has(id));
-  const columns = cypherResult.results[0].columns ?? [];
-=======
   const result = cypherResult.results[0];
 
   const [gridApi, setGridApi] = useState<UiGridApi | null>(null);
@@ -224,7 +216,6 @@ export function QueryResultsTable({
       </button>
     );
   };
->>>>>>> Stashed changes
 
   const cellRenderers = useMemo(
     () => Object.fromEntries(columnDefs.map(({ name }) => [name, renderCell])),
@@ -233,129 +224,11 @@ export function QueryResultsTable({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-<<<<<<< Updated upstream
-      <div className="flex-1 overflow-auto">
-        <table className="result-table">
-          <thead>
-            <tr>
-              <th className="w-12">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      onSelectAll(allNodeIds);
-                    } else {
-                      onClearSelection();
-                    }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="cursor-pointer"
-                />
-              </th>
-              {columns.map((col) => (
-                <th key={col}>{col}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {cypherResult.results[0].data.map((row, rowIndex) => {
-              // Extract node ID from first node-like object in row
-              let nodeId: string | null = null;
-              for (const cell of row.row) {
-                if (cell && typeof cell === "object") {
-                  const cellObj = cell as Record<string, unknown>;
-                  if (cellObj.elementId || cellObj.id || cellObj._nodeId) {
-                    const nodeData = extractNodeFromResult(cellObj);
-                    if (nodeData) {
-                      nodeId = nodeData.id;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              const handleRowClick = () => {
-                if (nodeId) {
-                  // Find first node-like object in row and select it
-                  for (const cell of row.row) {
-                    if (cell && typeof cell === "object") {
-                      const cellObj = cell as Record<string, unknown>;
-                      if (
-                        cellObj.elementId ||
-                        cellObj.id ||
-                        cellObj._nodeId
-                      ) {
-                        const nodeData = extractNodeFromResult(cellObj);
-                        if (nodeData) {
-                          onNodeSelect(nodeData);
-                          break;
-                        }
-                      }
-                    }
-                  }
-                }
-              };
-
-              return (
-                <tr
-                  key={`row-${rowIndex}-${nodeId || 'no-node'}`}
-                  onClick={handleRowClick}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleRowClick();
-                    }
-                  }}
-                  tabIndex={0}
-                  className={`cursor-pointer hover:bg-nornic-primary/10 ${
-                    nodeId && selectedNodeIds.has(nodeId)
-                      ? "bg-nornic-primary/20"
-                      : ""
-                  }`}
-                >
-                  <td
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                      }
-                    }}
-                  >
-                    {nodeId && (
-                      <input
-                        type="checkbox"
-                        checked={selectedNodeIds.has(nodeId)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          onToggleSelect(nodeId);
-                        }}
-                        className="cursor-pointer"
-                      />
-                    )}
-                  </td>
-                  {row.row.map((cell, cellIndex) => {
-                    const cellKey = typeof cell === "object" && cell !== null && "elementId" in cell
-                      ? String((cell as Record<string, unknown>).elementId || cellIndex)
-                      : String(cell) || cellIndex;
-                    return (
-                    <td key={cellKey} className="font-mono text-xs">
-                      <ExpandableCell data={cell} />
-                    </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-=======
       <div className="flex-1 overflow-hidden nornic-grid">
         <UiGrid options={gridOptions} cellRenderers={cellRenderers} onRegisterApi={setGridApi} />
->>>>>>> Stashed changes
       </div>
       <p className="text-xs text-norse-silver mt-2 px-2">
-        {cypherResult.results[0].data.length} row(s) returned
+        {result.data.length} row(s) returned
       </p>
     </div>
   );

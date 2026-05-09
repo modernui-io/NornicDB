@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UiGrid } from '@ornery/ui-grid-react';
+import type { GridCellTemplateContext, GridColumnDef, GridOptions, GridRecord, UiGridApi } from '@ornery/ui-grid-core';
 import { PageLayout } from '../components/common/PageLayout';
 import { PageHeader } from '../components/common/PageHeader';
 import { FormInput } from '../components/common/FormInput';
@@ -47,6 +49,7 @@ export function AdminUsers() {
   const [editDisabled, setEditDisabled] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
+  const [usersGridApi, setUsersGridApi] = useState<UiGridApi | null>(null);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -142,29 +145,24 @@ export function AdminUsers() {
     }
   };
 
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setEditRoles([...user.roles]);
-    setEditDisabled(user.disabled || false);
-    setUpdateError('');
-  };
-
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
+  const handleUpdateUser = async (targetUser?: User, patch?: Partial<User>) => {
+    const user = targetUser ?? editingUser;
+    if (!user) return;
     
     setUpdateError('');
     setUpdating(true);
 
     try {
-      const response = await fetch(joinBasePath(BASE_PATH, `/auth/users/${editingUser.username}`), {
+      const response = await fetch(joinBasePath(BASE_PATH, `/auth/users/${user.username}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          roles: editRoles,
-          disabled: editDisabled,
+          email: patch && 'email' in patch ? patch.email : user.email,
+          roles: patch?.roles ?? (targetUser ? user.roles : editRoles),
+          disabled: patch?.disabled ?? (targetUser ? Boolean(user.disabled) : editDisabled),
         }),
       });
 
@@ -173,7 +171,9 @@ export function AdminUsers() {
         throw new Error(data.message || 'Failed to update user');
       }
 
-      setEditingUser(null);
+      if (!targetUser) {
+        setEditingUser(null);
+      }
       await loadUsers();
     } catch (err) {
       setUpdateError(err instanceof Error ? err.message : 'Failed to update user');
@@ -212,8 +212,6 @@ export function AdminUsers() {
     }
   };
 
-<<<<<<< Updated upstream
-=======
   const usersGridData = useMemo<GridRecord[]>(() => users.map((user) => ({
     ...user,
     __gridId: user.username,
@@ -400,8 +398,6 @@ export function AdminUsers() {
     last_login: renderUserCell,
     actions: renderUserCell,
   }), [renderUserCell]);
-
->>>>>>> Stashed changes
   if (!isAdmin) {
     return null;
   }
@@ -502,102 +498,12 @@ export function AdminUsers() {
 
         {/* Users Table */}
         <div className="bg-norse-shadow border border-norse-rune rounded-lg overflow-hidden">
-<<<<<<< Updated upstream
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-norse-stone">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Username</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Email</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Roles</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Last Login</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-norse-silver">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-norse-rune">
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-norse-fog">
-                      No users found
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr key={user.username} className="hover:bg-norse-stone/50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-white">{user.username}</div>
-                      </td>
-                      <td className="px-4 py-3 text-norse-silver">
-                        {user.email || <span className="text-norse-fog">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {user.roles.map(role => (
-                            <span
-                              key={role}
-                              className={`px-2 py-1 rounded text-xs ${
-                                role === 'admin'
-                                  ? 'bg-red-500/20 text-red-400'
-                                  : role === 'editor'
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : 'bg-norse-stone text-norse-silver'
-                              }`}
-                            >
-                              {role}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {user.disabled ? (
-                          <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">
-                            Disabled
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">
-                            Active
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-norse-fog text-sm">
-                        {user.last_login
-                          ? new Date(user.last_login).toLocaleString()
-                          : <span className="text-norse-fog">Never</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                            icon={Edit}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.username)}
-                            icon={Trash2}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-=======
           <div className="nornic-grid p-4">
             <UiGrid
               options={userGridOptions}
               onRegisterApi={setUsersGridApi}
               cellRenderers={userCellRenderers}
             />
->>>>>>> Stashed changes
           </div>
         </div>
 

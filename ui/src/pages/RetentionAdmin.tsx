@@ -11,6 +11,8 @@ import {
   Shield,
   Trash2,
 } from "lucide-react";
+import { UiGrid } from "@ornery/ui-grid-react";
+import type { GridCellTemplateContext, GridColumnDef, GridOptions, GridRecord } from "@ornery/ui-grid-core";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { FormInput } from "../components/common/FormInput";
@@ -332,14 +334,46 @@ export function RetentionAdmin() {
     setPolicyModalOpen(true);
   };
 
-<<<<<<< Updated upstream
-=======
+  const policyGridData = useMemo<GridRecord[]>(() => policies.map((policy) => ({
+    ...policy,
+    __gridId: policy.id,
+    retention: formatRetentionPeriod(policy),
+    archive: policy.archive_before_delete ? policy.archive_path || "Archive enabled" : "Delete directly",
+  })), [policies]);
+
+  const policyColumnDefs = useMemo<GridColumnDef[]>(() => [
+    { name: "name", displayName: "Policy", field: "name", width: "minmax(14rem, 1.4fr)" },
+    { name: "id", displayName: "ID", field: "id", width: "minmax(10rem, 1fr)" },
+    { name: "description", displayName: "Description", field: "description", width: "minmax(18rem, 1.8fr)" },
+    { name: "category", displayName: "Category", field: "category", width: "140px" },
+    { name: "retention", displayName: "Retention", field: "retention", width: "120px" },
+    { name: "archive", displayName: "Archive", field: "archive", width: "minmax(12rem, 1.2fr)" },
+    { name: "active", displayName: "State", field: "active", width: "160px", enableSorting: false },
+    { name: "actions", displayName: "Actions", width: "180px", enableSorting: false, enableFiltering: false },
+  ], []);
+
+  const policyGridOptions = useMemo<GridOptions>(() => ({
+    id: "retention-policy-grid",
+    data: policyGridData,
+    columnDefs: policyColumnDefs,
+    rowIdentity: (row) => String(row.__gridId),
+    enableSorting: true,
+    enableFiltering: true,
+    viewportHeight: 520,
+    emptyMessage: "No retention policies loaded. Add one manually or load the built-in defaults.",
+  }), [policyColumnDefs, policyGridData]);
+
   const updatePolicyInline = useCallback(
     async (policy: RetentionPolicy, patch: Partial<RetentionPolicy>) => {
       setError("");
       setSuccess("");
       try {
-        const { __gridId: _, ...cleanPolicy } = policy as RetentionPolicy & { __gridId?: unknown };
+        const {
+          __gridId: _,
+          retention: _retention,
+          archive: _archive,
+          ...cleanPolicy
+        } = policy as RetentionPolicy & { __gridId?: unknown; retention?: unknown; archive?: unknown };
         await api.updateRetentionPolicy(policy.id, { ...cleanPolicy, ...patch });
         await refresh();
       } catch (err) {
@@ -446,8 +480,6 @@ export function RetentionAdmin() {
     active: renderPolicyCell,
     actions: renderPolicyCell,
   }), [renderPolicyCell]);
-
->>>>>>> Stashed changes
   const savePolicy = async () => {
     setPolicySaving(true);
     setError("");
@@ -761,86 +793,8 @@ export function RetentionAdmin() {
                   </Button>
                 </div>
 
-<<<<<<< Updated upstream
-                <div className="overflow-x-auto border border-norse-rune rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead className="bg-norse-stone/60">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-norse-silver font-medium">Policy</th>
-                        <th className="px-4 py-3 text-left text-norse-silver font-medium">Category</th>
-                        <th className="px-4 py-3 text-left text-norse-silver font-medium">Retention</th>
-                        <th className="px-4 py-3 text-left text-norse-silver font-medium">Archive</th>
-                        <th className="px-4 py-3 text-left text-norse-silver font-medium">State</th>
-                        <th className="px-4 py-3 text-right text-norse-silver font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {policies.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-6 text-center text-norse-silver">
-                            No retention policies loaded. Add one manually or load the built-in defaults.
-                          </td>
-                        </tr>
-                      ) : (
-                        policies.map((policy) => (
-                          <tr key={policy.id} className="border-t border-norse-rune/50 align-top">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-white">{policy.name}</div>
-                              <div className="text-xs text-norse-fog mt-1">{policy.id}</div>
-                              {policy.description ? (
-                                <div className="text-xs text-norse-silver mt-2 max-w-sm">
-                                  {policy.description}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-3 text-white">{policy.category}</td>
-                            <td className="px-4 py-3 text-white">{formatRetentionPeriod(policy)}</td>
-                            <td className="px-4 py-3 text-norse-silver">
-                              {policy.archive_before_delete
-                                ? policy.archive_path || "Archive enabled"
-                                : "Delete directly"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${policy.active ? "bg-green-500/20 text-green-300" : "bg-norse-stone text-norse-silver"}`}
-                              >
-                                {policy.active ? "Active" : "Inactive"}
-                              </span>
-                              {(policy.compliance_frameworks ?? []).length > 0 ? (
-                                <div className="text-xs text-norse-fog mt-2">
-                                  {(policy.compliance_frameworks ?? []).join(", ")}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  icon={Edit2}
-                                  onClick={() => openEditPolicy(policy)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  icon={Trash2}
-                                  onClick={() => setPendingAction({ kind: "delete-policy", policy })}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-=======
                 <div className="nornic-grid border border-norse-rune rounded-lg p-4">
                   <UiGrid options={policyGridOptions} cellRenderers={policyCellRenderers} />
->>>>>>> Stashed changes
                 </div>
               </div>
 
